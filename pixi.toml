@@ -1,0 +1,29 @@
+[workspace]
+name = "f1tenth-benchmarks-reproduction"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = "3.9.*"
+pip = "*"
+setuptools = "*"
+
+[pypi-dependencies]
+numpy = "==1.22.0"
+numba = "==0.57.1"
+matplotlib = "==3.5.2"
+scipy = "==1.11.1"
+pyyaml = "==6.0.1"
+casadi = "==3.6.4"
+pandas = "*"
+opencv-python = "*"
+torch = { version = "==2.1.2", index = "https://download.pytorch.org/whl/cpu" }
+seaborn = "*"
+quadprog = "==0.1.13"
+ipykernel = "*"
+nbconvert = "*"
+
+[activation.env]
+PYTHONPATH = "$PIXI_PROJECT_ROOT/trajectory_planning_helpers:$PIXI_PROJECT_ROOT"
+MPLBACKEND = "Agg"
+PYTHONNOUSERSITE = "1"
