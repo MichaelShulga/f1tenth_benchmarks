@@ -1,0 +1,142 @@
+name: Full reproduction and release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: GitHub Release tag
+        required: true
+        default: reproduction-v1.0.0
+  push:
+    tags:
+      - "reproduction-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      MPLBACKEND: Agg
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install locked Pixi environment
+        uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          pixi-version: v0.77.0
+          frozen: true
+          cache: true
+
+      - name: Run existing benchmark entry point
+        run: |
+          pixi run python -m \
+            f1tenth_benchmarks.benchmark_results.generate_benchmark_results
+
+      - name: Execute existing report notebook
+        run: |
+          pixi run jupyter nbconvert \
+            --to notebook \
+            --execute \
+            --inplace \
+            --ExecutePreprocessor.timeout=-1 \
+            f1tenth_benchmarks/benchmark_results/benchmark_result_plots.ipynb
+
+      - name: Validate benchmark results
+        run: |
+          pixi run python - <<'PY'
+          import pandas as pd
+
+          expected = {
+              ("GlobalPlanPP", "benchmark_pp"),
+              ("GlobalPlanMPCC", "benchmark_mpcc"),
+              ("FollowTheGap", "benchmark_ftg"),
+              ("EndToEnd", "TD3_TAL_12_gbr"),
+          }
+          summary = pd.read_csv("Logs/Summary.csv")
+          present = set(zip(summary.Vehicle, summary.TestID))
+          missing = expected - present
+          if missing:
+              raise SystemExit(f"Missing benchmark results: {sorted(missing)}")
+
+          full = pd.read_csv("Logs/Full.csv")
+          checks = [
+              ("GlobalPlanPP", "benchmark_pp"),
+              ("GlobalPlanMPCC", "benchmark_mpcc"),
+              ("FollowTheGap", "benchmark_ftg"),
+              ("EndToEnd", "TD3_TAL_12_gbr"),
+          ]
+          expected_counts = {"aut": 10, "esp": 10, "gbr": 10, "mco": 10}
+          for vehicle, test_id in checks:
+              rows = full[(full.Vehicle == vehicle) & (full.TestID == test_id)]
+              counts = rows.groupby("TestMap").size().to_dict()
+              if counts != expected_counts:
+                  raise SystemExit(
+                      f"Unexpected attempt counts for {vehicle}/{test_id}: {counts}"
+                  )
+          print("All 160 benchmark attempts are present.")
+          PY
+
+      - name: Build release assets
+        run: |
+          mkdir -p release-assets
+          cp Logs/Full.csv release-assets/
+          cp Logs/Summary.csv release-assets/
+          cp f1tenth_benchmarks/benchmark_results/benchmark_result_plots.ipynb \
+            release-assets/benchmark_result_plots.executed.ipynb
+          if [ -d Data/BenchmarkArticle ]; then
+            tar -czf release-assets/benchmark-article-data.tar.gz \
+              Data/BenchmarkArticle
+          fi
+          tar -czf release-assets/raw-logs.tar.gz Logs
+          {
+            echo "git_sha=$GITHUB_SHA"
+            echo "runner_os=$RUNNER_OS"
+            pixi --version
+            pixi run python --version
+            pixi run python - <<'PY'
+          import casadi, numba, numpy, scipy, torch
+          print(f"numpy={numpy.__version__}")
+          print(f"numba={numba.__version__}")
+          print(f"scipy={scipy.__version__}")
+          print(f"casadi={casadi.__version__}")
+          print(f"torch={torch.__version__}")
+          PY
+          } > release-assets/environment-manifest.txt
+          (
+            cd release-assets
+            sha256sum $(find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\n' | sort) \
+              > SHA256SUMS
+          )
+
+      - name: Select release tag
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "RELEASE_TAG=${{ inputs.release_tag }}" >> "$GITHUB_ENV"
+          else
+            echo "RELEASE_TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          fi
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-assets/* --clobber
+          else
+            gh release create "$RELEASE_TAG" release-assets/* \
+              --target "$GITHUB_SHA" \
+              --title "F1TENTH article reproduction $RELEASE_TAG" \
+              --notes "Locked Pixi reproduction of the benchmark pipeline. Includes raw logs, aggregated CSV files, executed notebook, generated article data, environment versions, and SHA256 checksums."
+          fi
