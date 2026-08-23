@@ -44,7 +44,7 @@ def follow_the_gap():
 
 
 def end_to_end_drl():
-    test_id = "benchmark_drl"
+    test_id = "TD3_TAL_12_gbr"
     training_map = "gbr"
     seed_randomness(12)
     print(f"Training DRL agent: {test_id}")
@@ -59,11 +59,11 @@ def end_to_end_drl():
 
 
 if __name__ == "__main__":
-    # generate_racelines()
-    # optimisation_and_tracking()
+    generate_racelines()
+    optimisation_and_tracking()
     mpcc()
-    # follow_the_gap()
-    # end_to_end_drl()
+    follow_the_gap()
+    end_to_end_drl()
 
 
 
