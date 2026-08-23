@@ -1,3 +1,7 @@
+# OS-generated files
+.DS_Store
+**/.DS_Store
+
 # Custom
 !Logs/.gitkeep
 Logs/
