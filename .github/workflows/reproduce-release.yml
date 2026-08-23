@@ -1,12 +1,9 @@
 name: Full reproduction and release
 
 on:
-  workflow_dispatch:
-    inputs:
-      release_tag:
-        description: GitHub Release tag
-        required: true
-        default: reproduction-v1.0.1
+  push:
+    tags:
+      - "reproduction-v*"
 
 permissions:
   contents: write
@@ -62,8 +59,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ inputs.release_tag }}" \
+          gh release create "$GITHUB_REF_NAME" \
             release-assets/* \
             --target "$GITHUB_SHA" \
-            --title "F1TENTH article reproduction ${{ inputs.release_tag }}" \
+            --title "F1TENTH article reproduction $GITHUB_REF_NAME" \
             --notes "Locked Pixi reproduction using the existing benchmark entry point and report notebook."

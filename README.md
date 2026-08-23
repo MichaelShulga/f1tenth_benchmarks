@@ -79,13 +79,16 @@ along with the article plots.
 
 ## GitHub Actions reproduction
 
-1. Open [Actions](https://github.com/MichaelShulga/f1tenth_benchmarks/actions).
-2. Select **Full reproduction and release**.
-3. Click **Run workflow**.
-4. Enter a new release tag.
+Push a new reproduction tag:
 
-The workflow runs the existing benchmark entry point, executes the existing notebook and
-publishes the resulting logs and article artifacts as a GitHub Release.
+```bash
+git tag reproduction-v1.0.1
+git push origin reproduction-v1.0.1
+```
+
+The tag starts the **Full reproduction and release** workflow. It runs the existing
+benchmark entry point, executes the existing notebook and publishes the resulting logs
+and article artifacts as a GitHub Release.
 
 ## Reproduction note
 
