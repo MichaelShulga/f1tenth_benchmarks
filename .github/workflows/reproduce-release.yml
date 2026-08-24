@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 240
     env:
-      MPLBACKEND: Agg
       OMP_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"
       OPENBLAS_NUM_THREADS: "1"
@@ -34,12 +33,13 @@ jobs:
 
       - name: Run existing benchmark entry point
         run: |
-          pixi run python -m \
+          pixi run env MPLBACKEND=Agg python -m \
             f1tenth_benchmarks.benchmark_results.generate_benchmark_results
 
       - name: Execute existing report notebook
         run: |
-          pixi run jupyter nbconvert \
+          pixi run env MPLBACKEND=module://matplotlib_inline.backend_inline \
+            jupyter nbconvert \
             --to notebook \
             --execute \
             --inplace \

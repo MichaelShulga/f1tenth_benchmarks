@@ -14,13 +14,12 @@ For descriptions of the simulator, planners and evaluation methodology, refer to
 
 ## Local reproduction
 
-### 1. Clone the verified release
+### 1. Clone the repository
 
 ```bash
 git clone --recurse-submodules \
   https://github.com/MichaelShulga/f1tenth_benchmarks.git
 cd f1tenth_benchmarks
-git checkout reproduction-v1.0.1
 git submodule update --init --recursive
 ```
 
@@ -47,14 +46,15 @@ The Git submodule is imported directly from its checked-out source through the
 ### 4. Run all experiments
 
 ```bash
-pixi run python -m \
+pixi run env MPLBACKEND=Agg python -m \
   f1tenth_benchmarks.benchmark_results.generate_benchmark_results
 ```
 
 ### 5. Execute the existing report notebook
 
 ```bash
-pixi run jupyter nbconvert \
+pixi run env MPLBACKEND=module://matplotlib_inline.backend_inline \
+  jupyter nbconvert \
   --to notebook \
   --execute \
   --inplace \
